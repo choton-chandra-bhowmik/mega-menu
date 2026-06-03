@@ -109,14 +109,14 @@ class Mega_Menu_Admin {
 		);
 		
 		// Add submenu for viewing all menus
-		add_submenu_page(
-			'mega-menu',
-			__( 'View All Menus', 'mega-menu' ),
-			__( 'View All Menus', 'mega-menu' ),
-			'manage_options',
-			'mega-menu-view-all',
-			array( $this, 'render_view_all_menus' )
-		);
+		// add_submenu_page(
+		// 	'mega-menu',
+		// 	__( 'View All Menus', 'mega-menu' ),
+		// 	// __( 'View All Menus', 'mega-menu' ),
+		// 	'manage_options',
+		// 	'mega-menu-view-all',
+		// 	array( $this, 'render_view_all_menus' )
+		// );
 	}
 	
 	/**

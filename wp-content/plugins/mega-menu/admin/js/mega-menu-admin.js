@@ -142,7 +142,7 @@
 			return;
 		}
 
-		console.log('Creating menu with title:', title, 'page_id:', pageId);
+		// console.log('Creating menu with title:', title, 'page_id:', pageId);
 
 		$.ajax({
 			url: megaMenuData.ajaxUrl,
@@ -172,7 +172,7 @@
 					var menuId = response.data.menu.id;
 					addMenuItem(menuId, true);
 					
-					console.log('Menu created successfully!');
+					// console.log('Menu created successfully!');
 				} else {
 					var errorMsg = 'Unknown error';
 					if (response.data) {
@@ -190,7 +190,7 @@
 							}
 						}
 					}
-					console.error('Menu creation failed:', response.data);
+					// console.error('Menu creation failed:', response.data);
 					alert('Error: ' + errorMsg);
 				}
 			},
@@ -234,7 +234,7 @@
 				menu_id: menuId
 			},
 			success: function(response) {
-				console.log('Loaded menu items for menu ' + menuId + ':', response);
+				// console.log('Loaded menu items for menu ' + menuId + ':', response);
 				if (response.success) {
 					var $container = $('[data-menu-id="' + menuId + '"]').find('.menu-items-list');
 					$container.html(response.data.html);
@@ -278,7 +278,7 @@
 				}
 			},
 			error: function(jqXHR, textStatus, errorThrown) {
-				console.error('Failed to add menu item:', textStatus, errorThrown);
+				// console.error('Failed to add menu item:', textStatus, errorThrown);
 				if (!silent) {
 					alert('An error occurred while adding the item.');
 				}
@@ -308,7 +308,7 @@
 			});
 		});
 
-		console.log('Saving item:', { itemId, heading, link, imageData });
+		// console.log('Saving item:', { itemId, heading, link, imageData });
 
 		$.ajax({
 			url: megaMenuData.ajaxUrl,
@@ -323,9 +323,9 @@
 				image_data: imageData
 			},
 			success: function(response) {
-				console.log('Save response:', response);
+				// console.log('Save response:', response);
 				if (response.success) {
-					console.log('Item saved successfully!');
+					// console.log('Item saved successfully!');
 					if (response.data && response.data.item) {
 						console.log('Saved item data from DB:', response.data.item);
 					}
@@ -405,7 +405,7 @@
 				}
 			},
 			error: function(jqXHR, textStatus, errorThrown) {
-				console.error('Failed to delete menu item:', textStatus, errorThrown);
+				// console.error('Failed to delete menu item:', textStatus, errorThrown);
 				alert('An error occurred while deleting the item.');
 			}
 		});
@@ -495,7 +495,7 @@
 				}
 			});
 
-			console.log('Final image data to save:', imageData);
+			// console.log('Final image data to save:', imageData);
 
 			// Update the hidden field
 			$row.find('.item-image-ids').val(JSON.stringify(imageData));
@@ -511,7 +511,7 @@
 	 * Update Images Preview
 	 */
 	function updateImagesPreview($row, imageData) {
-		console.log('Updating preview with image data:', imageData);
+		// console.log('Updating preview with image data:', imageData);
 		var $preview = $row.find('.images-preview-row');
 		$preview.html(''); // Clear existing images
 
@@ -521,7 +521,7 @@
 			var imageText = item.text !== undefined ? item.text : '';
 			var imageUrl = item.url !== undefined ? item.url : '';
 			
-			console.log('Processing image:', { imageId, imageText, imageUrl });
+			// console.log('Processing image:', { imageId, imageText, imageUrl });
 			
 			// Use WordPress attachment data
 			var attachment = wp.media.attachment(imageId);
@@ -535,7 +535,7 @@
 			}
 		});
 		
-		console.log('Preview update complete. Total images:', imageData.length);
+		// console.log('Preview update complete. Total images:', imageData.length);
 	}
 
 	/**

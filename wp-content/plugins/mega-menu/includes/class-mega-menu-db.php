@@ -24,6 +24,7 @@ class Mega_Menu_DB {
 		
 		$menus_table = $wpdb->prefix . 'mega_menus';
 		$items_table = $wpdb->prefix . 'mega_menu_items';
+		$image_data_table = $wpdb->prefix . 'mega_menu_image_data';
 		
 		// Create menus table
 		$sql = "CREATE TABLE IF NOT EXISTS $menus_table (
@@ -52,6 +53,22 @@ class Mega_Menu_DB {
 		) $charset_collate;";
 		
 		$wpdb->query( $sql2 );
+		
+		// Create image metadata table
+		$sql3 = "CREATE TABLE IF NOT EXISTS $image_data_table (
+		  id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+		  menu_item_id bigint(20) unsigned NOT NULL,
+		  image_id bigint(20) unsigned NOT NULL,
+		  image_text varchar(500),
+		  image_url varchar(1000),
+		  image_order int(11) DEFAULT 0,
+		  created_at datetime,
+		  updated_at datetime,
+		  PRIMARY KEY  (id),
+		  UNIQUE KEY unique_image (menu_item_id, image_id)
+		) $charset_collate;";
+		
+		$wpdb->query( $sql3 );
 		
 		if ( ! empty( $wpdb->last_error ) ) {
 			error_log( 'Mega Menu DB Error: ' . $wpdb->last_error );
@@ -233,6 +250,119 @@ class Mega_Menu_DB {
 				"SELECT * FROM " . $wpdb->prefix . "mega_menu_items WHERE menu_id = %d ORDER BY row_order ASC",
 				$menu_id
 			)
+		);
+	}
+	
+	/**
+	 * Get single menu item by ID
+	 */
+	public static function get_menu_item( $item_id ) {
+		global $wpdb;
+		
+		return $wpdb->get_row(
+			$wpdb->prepare(
+				"SELECT * FROM " . $wpdb->prefix . "mega_menu_items WHERE id = %d",
+				$item_id
+			)
+		);
+	}
+	
+	/**
+	 * Save image metadata for a menu item
+	 */
+	public static function save_image_metadata( $menu_item_id, $image_id, $image_text = '', $image_url = '' ) {
+		global $wpdb;
+		
+		$table = $wpdb->prefix . 'mega_menu_image_data';
+		
+		// Check if record exists
+		$existing = $wpdb->get_row(
+			$wpdb->prepare(
+				"SELECT id FROM $table WHERE menu_item_id = %d AND image_id = %d",
+				$menu_item_id,
+				$image_id
+			)
+		);
+		
+		if ( $existing ) {
+			// Update existing record
+			return $wpdb->update(
+				$table,
+				array(
+					'image_text' => $image_text,
+					'image_url'  => $image_url,
+					'updated_at' => current_time( 'mysql' ),
+				),
+				array(
+					'menu_item_id' => $menu_item_id,
+					'image_id'     => $image_id,
+				),
+				array( '%s', '%s', '%s' ),
+				array( '%d', '%d' )
+			);
+		} else {
+			// Insert new record
+			return $wpdb->insert(
+				$table,
+				array(
+					'menu_item_id' => $menu_item_id,
+					'image_id'     => $image_id,
+					'image_text'   => $image_text,
+					'image_url'    => $image_url,
+					'created_at'   => current_time( 'mysql' ),
+					'updated_at'   => current_time( 'mysql' ),
+				),
+				array( '%d', '%d', '%s', '%s', '%s', '%s' )
+			);
+		}
+	}
+	
+	/**
+	 * Get image metadata for a menu item
+	 */
+	public static function get_image_metadata( $menu_item_id ) {
+		global $wpdb;
+		
+		$table = $wpdb->prefix . 'mega_menu_image_data';
+		
+		return $wpdb->get_results(
+			$wpdb->prepare(
+				"SELECT * FROM $table WHERE menu_item_id = %d ORDER BY image_order ASC",
+				$menu_item_id
+			)
+		);
+	}
+	
+	/**
+	 * Delete image metadata for a specific image
+	 */
+	public static function delete_image_metadata( $menu_item_id, $image_id ) {
+		global $wpdb;
+		
+		$table = $wpdb->prefix . 'mega_menu_image_data';
+		
+		return $wpdb->delete(
+			$table,
+			array(
+				'menu_item_id' => $menu_item_id,
+				'image_id'     => $image_id,
+			),
+			array( '%d', '%d' )
+		);
+	}
+	
+	/**
+	 * Delete all image metadata for a menu item
+	 */
+	public static function delete_all_image_metadata( $menu_item_id ) {
+		global $wpdb;
+		
+		$table = $wpdb->prefix . 'mega_menu_image_data';
+		
+		return $wpdb->delete(
+			$table,
+			array( 'menu_item_id' => $menu_item_id ),
+			array( '%d' )
 		);
 	}
 	

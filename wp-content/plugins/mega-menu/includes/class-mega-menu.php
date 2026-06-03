@@ -113,9 +113,10 @@ class Mega_Menu {
 
 				<?php
 
-				$image_ids = json_decode( $item->image_ids, true );
+				// Get image metadata from new table
+				$image_metadata = Mega_Menu_DB::get_image_metadata( $item->id );
 
-				if ( ! is_array( $image_ids ) || empty( $image_ids ) ) {
+				if ( empty( $image_metadata ) ) {
 					continue;
 				}
 
@@ -126,24 +127,46 @@ class Mega_Menu {
 
 					<div class="mega-menu-image-grid">
 
-						<?php foreach ( $image_ids as $image_id ) : ?>
+						<?php foreach ( $image_metadata as $img_meta ) : ?>
 
 							<?php
-							$image_url = wp_get_attachment_image_url(
+							$image_id = $img_meta->image_id;
+							$image_text = $img_meta->image_text;
+							$image_url = $img_meta->image_url;
+							
+							$attachment_url = wp_get_attachment_image_url(
 								$image_id,
 								'large'
 							);
 
-							if ( ! $image_url ) {
+							if ( ! $attachment_url ) {
 								continue;
 							}
 							?>
 
-							<img
-								src="<?php echo esc_url( $image_url ); ?>"
-								class="mega-menu-preview-image"
-								alt=""
-							>
+							<div class="mega-menu-image-item">
+								<?php if ( ! empty( $image_url ) ) : ?>
+									<a href="<?php echo esc_url( $image_url ); ?>" class="mega-menu-image-link">
+										<img
+											src="<?php echo esc_url( $attachment_url ); ?>"
+											class="mega-menu-preview-image"
+											alt="<?php echo esc_attr( $image_text ); ?>"
+										>
+										<?php if ( ! empty( $image_text ) ) : ?>
+											<span class="mega-menu-image-text"><?php echo esc_html( $image_text ); ?></span>
+										<?php endif; ?>
+									</a>
+								<?php else : ?>
+									<img
+										src="<?php echo esc_url( $attachment_url ); ?>"
+										class="mega-menu-preview-image"
+										alt="<?php echo esc_attr( $image_text ); ?>"
+									>
+									<?php if ( ! empty( $image_text ) ) : ?>
+										<span class="mega-menu-image-text"><?php echo esc_html( $image_text ); ?></span>
+									<?php endif; ?>
+								<?php endif; ?>
+							</div>
 
 						<?php endforeach; ?>
 

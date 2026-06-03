@@ -37,6 +37,7 @@ class Mega_Menu_Admin {
 		// Check menus table
 		$menus_table = $wpdb->prefix . 'mega_menus';
 		$items_table = $wpdb->prefix . 'mega_menu_items';
+		$image_data_table = $wpdb->prefix . 'mega_menu_image_data';
 		
 		$charset_collate = $wpdb->get_charset_collate();
 		
@@ -67,6 +68,22 @@ class Mega_Menu_Admin {
 		) $charset_collate;";
 		
 		$wpdb->query( $sql2 );
+		
+		// Create image metadata table
+		$sql3 = "CREATE TABLE IF NOT EXISTS $image_data_table (
+		  id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+		  menu_item_id bigint(20) unsigned NOT NULL,
+		  image_id bigint(20) unsigned NOT NULL,
+		  image_text varchar(500),
+		  image_url varchar(1000),
+		  image_order int(11) DEFAULT 0,
+		  created_at datetime,
+		  updated_at datetime,
+		  PRIMARY KEY  (id),
+		  UNIQUE KEY unique_image (menu_item_id, image_id)
+		) $charset_collate;";
+		
+		$wpdb->query( $sql3 );
 		
 		// Verify tables were created
 		$check = $wpdb->get_var( "SHOW TABLES LIKE '$menus_table'" );
@@ -343,13 +360,33 @@ class Mega_Menu_Admin {
 		$item_id   = isset( $_POST['item_id'] ) ? intval( $_POST['item_id'] ) : 0;
 		$heading   = isset( $_POST['heading'] ) ? sanitize_text_field( $_POST['heading'] ) : '';
 		$link      = isset( $_POST['link'] ) ? esc_url( $_POST['link'] ) : '';
-		$image_ids = isset( $_POST['image_ids'] ) ? sanitize_text_field( $_POST['image_ids'] ) : '[]';
+		$image_data = isset( $_POST['image_data'] ) ? $_POST['image_data'] : array();
 		
 		if ( empty( $item_id ) ) {
 			wp_send_json_error( array( 'message' => 'Item ID is required', 'code' => 'missing_item_id' ) );
 		}
 		
-		$result = Mega_Menu_DB::update_menu_item( $item_id, $heading, $link, $image_ids, 0 );
+		error_log( 'AJAX: Updating menu item ' . $item_id );
+		error_log( 'Heading: ' . $heading );
+		error_log( 'Link: ' . $link );
+		error_log( 'Image data being saved: ' . print_r( $image_data, true ) );
+		
+		// Get array of image IDs to store in image_ids field (for backward compatibility)
+		$image_ids = array();
+		if ( is_array( $image_data ) ) {
+			foreach ( $image_data as $img_data ) {
+				if ( isset( $img_data['id'] ) ) {
+					$image_ids[] = $img_data['id'];
+				}
+			}
+		}
+		
+		$image_ids_json = wp_json_encode( $image_ids );
+		
+		// Update the menu item
+		$result = Mega_Menu_DB::update_menu_item( $item_id, $heading, $link, $image_ids_json, 0 );
+		
+		error_log( 'Update result: ' . ( $result !== false ? 'Success - ' . $result . ' rows affected' : 'Failed' ) );
 		
 		if ( $result === false ) {
 			global $wpdb;
@@ -362,7 +399,34 @@ class Mega_Menu_Admin {
 			) );
 		}
 		
-		wp_send_json_success( array( 'success' => true, 'rows_affected' => $result ) );
+		// Delete old image metadata and save new ones
+		Mega_Menu_DB::delete_all_image_metadata( $item_id );
+		
+		if ( is_array( $image_data ) ) {
+			$order = 0;
+			foreach ( $image_data as $img_data ) {
+				if ( isset( $img_data['id'] ) ) {
+					$img_id   = intval( $img_data['id'] );
+					$img_text = isset( $img_data['text'] ) ? sanitize_text_field( $img_data['text'] ) : '';
+					$img_url  = isset( $img_data['url'] ) ? esc_url_raw( $img_data['url'] ) : '';
+					
+					error_log( 'Saving image metadata - Item: ' . $item_id . ', Image: ' . $img_id . ', Text: ' . $img_text . ', URL: ' . $img_url );
+					
+					Mega_Menu_DB::save_image_metadata( $item_id, $img_id, $img_text, $img_url );
+					$order++;
+				}
+			}
+		}
+		
+		// Retrieve the updated item to verify
+		$updated_item = Mega_Menu_DB::get_menu_item( $item_id );
+		error_log( 'Verification: Updated item from DB: ' . print_r( $updated_item, true ) );
+		
+		wp_send_json_success( array( 
+			'success' => true, 
+			'rows_affected' => $result,
+			'item' => $updated_item
+		) );
 	}
 	
 	/**
@@ -443,12 +507,19 @@ class Mega_Menu_Admin {
 			wp_send_json_error( __( 'Menu ID is required', 'mega-menu' ) );
 		}
 		
+		error_log( 'Getting menu items for menu ID: ' . $menu_id );
+		
 		$menu_items = Mega_Menu_DB::get_menu_items( $menu_id );
+		
+		error_log( 'Retrieved menu items: ' . print_r( $menu_items, true ) );
 		
 		$html = '';
 		foreach ( $menu_items as $item ) {
+			error_log( 'Rendering item ' . $item->id . ' with image_ids: ' . $item->image_ids );
 			$html .= $this->render_menu_item_row( $item->id, $item->heading, $item->link, $item->image_ids );
 		}
+		
+		error_log( 'AJAX get_menu_items response HTML length: ' . strlen( $html ) );
 		
 		wp_send_json_success( array(
 			'items' => $menu_items,
@@ -494,6 +565,9 @@ class Mega_Menu_Admin {
 	 * Render menu item row HTML
 	 */
 	private function render_menu_item_row( $item_id, $heading, $link, $image_ids ) {
+		error_log( 'Rendering item row - Item ID: ' . $item_id );
+		error_log( 'Image IDs Raw Data: ' . $image_ids );
+		
 		ob_start();
 		?>
 		<div class="menu-item-row" data-item-id="<?php echo esc_attr( $item_id ); ?>">
@@ -518,19 +592,44 @@ class Mega_Menu_Admin {
 			
 			<div class="images-preview-row">
 				<?php 
-				$image_ids_array = json_decode( $image_ids, true );
-				if ( is_array( $image_ids_array ) && count( $image_ids_array ) > 0 ) {
-					foreach ( $image_ids_array as $img_id ) {
+				// Get image metadata from the new table
+				$image_metadata = Mega_Menu_DB::get_image_metadata( $item_id );
+				error_log( 'Retrieved image metadata for item ' . $item_id . ': ' . print_r( $image_metadata, true ) );
+				
+				if ( ! empty( $image_metadata ) ) {
+					foreach ( $image_metadata as $img_meta ) {
+						error_log( 'Processing image metadata: ' . print_r( $img_meta, true ) );
+						
+						$img_id   = $img_meta->image_id;
+						$img_text = $img_meta->image_text;
+						$img_url  = $img_meta->image_url;
+						
 						$img_src = wp_get_attachment_image_src( $img_id, 'thumbnail' );
-						if ( $img_src ) {
-							?>
-							<div class="image-thumbnail" data-image-id="<?php echo esc_attr( $img_id ); ?>">
-								<img src="<?php echo esc_url( $img_src[0] ); ?>" alt="Thumbnail" />
-								<button type="button" class="remove-image" data-image-id="<?php echo esc_attr( $img_id ); ?>">×</button>
+						error_log( 'Image source result for ID ' . $img_id . ': ' . ( $img_src ? 'Found - ' . $img_src[0] : 'Not Found' ) );
+						
+						// Show the container even if image is not found - user can still edit the text and URL
+						?>
+						<div class="image-item-container" data-image-id="<?php echo esc_attr( $img_id ); ?>">
+							<?php if ( $img_src ) : ?>
+								<div class="image-thumbnail">
+									<img src="<?php echo esc_url( $img_src[0] ); ?>" alt="Thumbnail" />
+									<button type="button" class="remove-image" data-image-id="<?php echo esc_attr( $img_id ); ?>">×</button>
+								</div>
+							<?php else : ?>
+								<div class="image-thumbnail image-not-found">
+									<span><?php esc_html_e( 'Image not found', 'mega-menu' ); ?></span>
+									<button type="button" class="remove-image" data-image-id="<?php echo esc_attr( $img_id ); ?>">×</button>
+								</div>
+							<?php endif; ?>
+							<div class="image-fields">
+								<input type="text" class="image-text-field" data-image-id="<?php echo esc_attr( $img_id ); ?>" value="<?php echo esc_attr( $img_text ); ?>" placeholder="<?php esc_attr_e( 'Image Text', 'mega-menu' ); ?>" />
+								<input type="url" class="image-url-field" data-image-id="<?php echo esc_attr( $img_id ); ?>" value="<?php echo esc_attr( $img_url ); ?>" placeholder="<?php esc_attr_e( 'Image URL', 'mega-menu' ); ?>" />
 							</div>
-							<?php
-						}
+						</div>
+						<?php
 					}
+				} else {
+					error_log( 'No image metadata found for item ' . $item_id );
 				}
 				?>
 			</div>

@@ -115,6 +115,40 @@
 	gap: 15px;
 }
 
+/* Menu Accordion Toggle */
+.menu-accordion-toggle {
+	background: none;
+	border: none;
+	padding: 6px 10px;
+	cursor: pointer;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 32px;
+	height: 32px;
+	border-radius: 3px;
+	transition: background-color 0.2s ease, color 0.2s ease;
+	color: #666;
+	flex-shrink: 0;
+}
+
+.menu-accordion-toggle:hover {
+	background-color: #e2e4e7;
+	color: #0073aa;
+}
+
+.chevron-icon {
+	display: inline-block;
+	font-size: 20px;
+	line-height: 1;
+	transition: transform 0.3s ease;
+	transform: rotate(0deg);
+}
+
+.menu-accordion-toggle.open .chevron-icon {
+	transform: rotate(90deg);
+}
+
 .menu-header h3 {
 	margin: 0;
 	font-size: 16px;
@@ -172,6 +206,14 @@
 
 /* Menu Items Container */
 .menu-items-container {
+	padding: 15px;
+	max-height: 0;
+	overflow: hidden;
+	transition: max-height 0.3s ease, padding 0.3s ease;
+}
+
+.menu-items-container.open {
+	max-height: 3000px;
 	padding: 15px;
 }
 
@@ -276,12 +318,13 @@
 	background: #f9f9f9;
 	border: 1px solid #e0e0e0;
 	border-radius: 4px;
+	max-width: 100%;
 }
 
 .image-thumbnail {
 	position: relative;
-	width: 80px;
-	height: 80px;
+	width: 150px;
+	height: 100px;
 	border: 1px solid #ddd;
 	border-radius: 3px;
 	overflow: hidden;
@@ -344,7 +387,7 @@
 
 .image-fields {
 	display: flex;
-	flex-direction: column;
+	/* flex-direction: column; */
 	gap: 8px;
 	flex: 1;
 }
@@ -387,21 +430,43 @@
 	color: #d63638;
 	background: transparent;
 }
-
 /* Responsive */
+@media screen and (max-width: 782px) {
+
+.image-item-container{
+	flex-direction: column;
+	align-items: center;
+	text-align: center;
+	gap: 10px;
+}
+}
 @media (max-width: 1024px) {
 	.mega-menu-admin-container {
 		grid-template-columns: 1fr;
 	}
 	
 	.menu-header {
-		flex-direction: column;
-		align-items: flex-start;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: 10px;
 	}
-	
+
+	.menu-accordion-toggle {
+		order: 1;
+		margin-right: 5px;
+	}
+
+	.menu-header h3 {
+		order: 2;
+		flex: 0 1 auto;
+		margin-right: auto;
+	}
+
 	.menu-actions {
+		order: 3;
 		width: 100%;
 		justify-content: flex-start;
+		margin-top: 10px;
 	}
 	
 	.menu-item-content {

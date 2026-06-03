@@ -66,6 +66,16 @@
 			var code = $(this).siblings('code').text();
 			copyToClipboard(code);
 		});
+
+		// Menu Accordion Toggle
+		$(document).on('click', '.menu-accordion-toggle', function(e) {
+			e.preventDefault();
+			var $button = $(this);
+			var $container = $button.closest('.mega-menu-item').find('.menu-items-container');
+			
+			$button.toggleClass('open');
+			$container.toggleClass('open');
+		});
 	});
 
 	/**
@@ -570,6 +580,9 @@
 	function createMenuElement(menu) {
 		var html = '<div class="mega-menu-item" data-menu-id="' + menu.id + '">' +
 			'<div class="menu-header">' +
+			'<button type="button" class="menu-accordion-toggle" data-menu-id="' + menu.id + '" title="Toggle menu items">' +
+			'<span class="chevron-icon">›</span>' +
+			'</button>' +
 			'<h3>' + menu.title + '</h3>' +
 			'<div class="menu-actions">' +
 			'<span class="shortcode-display">' +
